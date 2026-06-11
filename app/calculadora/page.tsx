@@ -1,141 +1,312 @@
 'use client'
-import { useState } from 'react'
-import { calcularArbitragem, formatBRL, formatPercent } from '@/lib/utils'
+import { useState, useEffect } from 'react'
+import { formatBRL } from '@/lib/utils'
+
+interface Linha {
+  id: number
+  odd: string
+  stake: string
+  travado: boolean // D = distribuído auto, C = customizado
+}
 
 export default function CalculadoraPage() {
-  const [odd1, setOdd1] = useState('')
-  const [odd2, setOdd2] = useState('')
-  const [stake, setStake] = useState('')
-  const [roiMin, setRoiMin] = useState('1')
+  const [linhas, setLinhas] = useState<Linha[]>([
+    { id: 1, odd: '2.000', stake: '', travado: false },
+    { id: 2, odd: '2.000', stake: '', travado: false },
+  ])
+  const [stakeTotal, setStakeTotal] = useState('100')
 
-  const o1 = parseFloat(odd1) || 0
-  const o2 = parseFloat(odd2) || 0
-  const s = parseFloat(stake) || 0
-  const calc = calcularArbitragem(o1, o2, s)
+  const odds = linhas.map(l => parseFloat(l.odd) || 0)
+  const totalValido = odds.every(o => o > 1)
+  const margem = totalValido ? odds.reduce((s, o) => s + 1 / o, 0) : null
+  const percentual = margem ? margem * 100 : null
+  const temArb = margem !== null && margem < 1
+  const roi = temArb ? ((1 / margem - 1) * 100) : null
 
-  const margem = o1 > 0 && o2 > 0 ? (1 / o1 + 1 / o2) * 100 : null
-  const roiMinNum = parseFloat(roiMin) || 0
+  // Calcula stakes automaticamente
+  useEffect(() => {
+    if (!totalValido || !margem) return
+    const total = parseFloat(stakeTotal) || 0
+    if (total <= 0) return
 
-  // Para stake mínimo para atingir ROI alvo
-  const stakeParaRoi = (roi: number) => {
-    if (!calc.valida) return null
-    return s > 0 ? s : null
+    setLinhas(prev => prev.map(l => {
+      if (l.travado) return l // customizado, não mexe
+      const odd = parseFloat(l.odd) || 0
+      if (odd <= 1) return l
+      const stake = total / (odd * margem)
+      return { ...l, stake: stake.toFixed(2) }
+    }))
+  }, [stakeTotal, linhas.map(l => l.odd).join(','), margem])
+
+  const setOdd = (id: number, val: string) => {
+    setLinhas(prev => prev.map(l => l.id === id ? { ...l, odd: val } : l))
+  }
+
+  const setStake = (id: number, val: string) => {
+    setLinhas(prev => prev.map(l => l.id === id ? { ...l, stake: val, travado: true } : l))
+  }
+
+  const toggleD = (id: number) => {
+    setLinhas(prev => prev.map(l => l.id === id ? { ...l, travado: false } : l))
+  }
+
+  const toggleC = (id: number) => {
+    setLinhas(prev => prev.map(l => l.id === id ? { ...l, travado: true } : l))
+  }
+
+  const addLinha = () => {
+    setLinhas(prev => [...prev, { id: Date.now(), odd: '2.000', stake: '', travado: false }])
+  }
+
+  const removeLinha = (id: number) => {
+    if (linhas.length <= 2) return
+    setLinhas(prev => prev.filter(l => l.id !== id))
+  }
+
+  const totalStakes = linhas.reduce((s, l) => s + (parseFloat(l.stake) || 0), 0)
+
+  const lucroLinha = (l: Linha) => {
+    const odd = parseFloat(l.odd) || 0
+    const stake = parseFloat(l.stake) || 0
+    if (!odd || !stake) return null
+    return (odd * stake) - totalStakes
   }
 
   return (
-    <div className="fade-in" style={{ maxWidth: 680, margin: '0 auto' }}>
+    <div className="fade-in" style={{ maxWidth: 780, margin: '0 auto' }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em' }}>Calculadora de Arbitragem</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 14 }}>Insira as odds e o stake total para calcular a distribuição ideal.</p>
+        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em' }}>Calculadora</h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: 14 }}>
+          Insira as odds de cada casa para calcular a distribuição ideal de stakes.
+        </p>
       </div>
 
-      <div className="card" style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-          <div>
-            <label className="label" style={{ color: 'var(--accent-cyan)' }}>Odd — Casa 1</label>
-            <input className="input" type="number" step="0.001" placeholder="Ex: 1.850" value={odd1} onChange={e => setOdd1(e.target.value)} style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }} />
-          </div>
-          <div>
-            <label className="label" style={{ color: 'var(--accent-purple)' }}>Odd — Casa 2</label>
-            <input className="input" type="number" step="0.001" placeholder="Ex: 2.100" value={odd2} onChange={e => setOdd2(e.target.value)} style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }} />
-          </div>
-        </div>
-
-        {margem !== null && (
-          <div style={{ marginBottom: 20, padding: '10px 16px', background: 'var(--bg-elevated)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Margem total das odds:</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: margem < 100 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-              {margem.toFixed(2)}% {margem < 100 ? '✓ Arbitragem possível' : '✗ Sem arbitragem'}
-            </span>
-          </div>
-        )}
-
-        <div>
-          <label className="label">Stake Total (R$)</label>
-          <input className="input" type="number" placeholder="Ex: 200.00" value={stake} onChange={e => setStake(e.target.value)} style={{ fontSize: 18, fontWeight: 600 }} />
-        </div>
-      </div>
-
-      {/* Resultado */}
-      {s > 0 && o1 > 0 && o2 > 0 && (
-        <div className={`card fade-in`} style={{ padding: 28, marginBottom: 20, borderColor: calc.valida ? 'rgba(0,230,118,0.3)' : 'rgba(255,82,82,0.3)' }}>
-          <h2 style={{ fontSize: 13, fontWeight: 600, color: calc.valida ? 'var(--accent-green)' : 'var(--accent-red)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 20 }}>
-            {calc.valida ? '✓ Arbitragem válida' : '✗ Sem lucro garantido'}
-          </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-            <ResultBox
-              label="Stake Casa 1"
-              value={formatBRL(calc.stake1)}
-              pct={`${((calc.stake1 / s) * 100).toFixed(1)}% do total`}
-              color="var(--accent-cyan)"
-            />
-            <ResultBox
-              label="Stake Casa 2"
-              value={formatBRL(calc.stake2)}
-              pct={`${((calc.stake2 / s) * 100).toFixed(1)}% do total`}
-              color="var(--accent-purple)"
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-            <ResultBox label="Lucro Garantido" value={formatBRL(calc.lucro_garantido)} color={calc.valida ? 'var(--accent-green)' : 'var(--accent-red)'} />
-            <ResultBox label="ROI" value={formatPercent(calc.roi)} color={calc.valida ? 'var(--accent-green)' : 'var(--accent-red)'} />
-            <ResultBox label="Retorno Total" value={formatBRL(s + calc.lucro_garantido)} color="var(--text-primary)" />
-          </div>
-
-          {calc.valida && (
-            <div style={{ marginTop: 20, padding: '14px 16px', background: 'rgba(0,230,118,0.06)', borderRadius: 8, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              <strong style={{ color: 'var(--text-primary)' }}>Como apostar:</strong><br />
-              → Aposte <strong>{formatBRL(calc.stake1)}</strong> na seleção da <strong>Casa 1</strong> (odd {o1.toFixed(3)})<br />
-              → Aposte <strong>{formatBRL(calc.stake2)}</strong> na seleção da <strong>Casa 2</strong> (odd {o2.toFixed(3)})<br />
-              → Independente do resultado, você lucra <strong style={{ color: 'var(--accent-green)' }}>{formatBRL(calc.lucro_garantido)}</strong>
+      {/* Badge de arbitragem */}
+      {percentual !== null && (
+        <div style={{
+          marginBottom: 20,
+          padding: '14px 20px',
+          borderRadius: 10,
+          background: temArb ? 'rgba(0,230,118,0.07)' : 'rgba(255,82,82,0.07)',
+          border: `1px solid ${temArb ? 'rgba(0,230,118,0.25)' : 'rgba(255,82,82,0.25)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Percentual</div>
+              <div style={{
+                fontSize: 28,
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                color: temArb ? 'var(--accent-green)' : 'var(--accent-red)'
+              }}>
+                {percentual.toFixed(2)}%
+              </div>
             </div>
-          )}
+            {temArb && roi !== null && (
+              <>
+                <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>ROI Garantido</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent-green)' }}>
+                    +{roi.toFixed(2)}%
+                  </div>
+                </div>
+                <div style={{ width: 1, height: 40, background: 'var(--border)' }} />
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Lucro em R$</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--accent-green)' }}>
+                    {formatBRL((parseFloat(stakeTotal) || 0) * roi / 100)}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <div style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: temArb ? 'var(--accent-green)' : 'var(--accent-red)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            {temArb ? '✓ Arbitragem válida' : '✗ Sem arbitragem'}
+          </div>
         </div>
       )}
 
-      {/* Tabela de sensibilidade */}
-      {calc.valida && (
-        <div className="card" style={{ padding: 24 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>Sensibilidade por Stake</h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Stake Total', 'Stake Casa 1', 'Stake Casa 2', 'Lucro', 'ROI'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[0.5, 1, 1.5, 2, 3, 5].map(mult => {
-                const st = s * mult
-                const c = calcularArbitragem(o1, o2, st)
-                const isBase = mult === 1
-                return (
-                  <tr key={mult} className="table-row" style={{ background: isBase ? 'rgba(0,230,118,0.04)' : undefined }}>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: isBase ? 700 : 400 }}>{formatBRL(st)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent-cyan)' }}>{formatBRL(c.stake1)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent-purple)' }}>{formatBRL(c.stake2)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent-green)', fontWeight: 600 }}>{formatBRL(c.lucro_garantido)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent-green)' }}>{formatPercent(c.roi)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '60px 1fr 160px 48px 48px 100px 32px',
+          gap: 0,
+          padding: '10px 16px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-elevated)',
+        }}>
+          {['Chance', 'Odd', 'Aposta', 'D', 'C', 'Lucro', ''].map((h, i) => (
+            <div key={i} style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              textAlign: i >= 4 ? 'right' : i === 3 || i === 4 ? 'center' : 'left',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: i === 3 || i === 4 ? 'center' : i === 5 ? 'flex-end' : 'flex-start',
+              gap: 4,
+            }}>
+              {h}
+              {(h === 'D' || h === 'C') && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: 'var(--border-bright)', fontSize: 9, color: 'var(--text-muted)',
+                  cursor: 'help', fontWeight: 700,
+                }} title={h === 'D' ? 'Distribuído automaticamente' : 'Customizado manualmente'}>?</span>
+              )}
+            </div>
+          ))}
         </div>
-      )}
-    </div>
-  )
-}
 
-function ResultBox({ label, value, pct, color }: { label: string; value: string; pct?: string; color?: string }) {
-  return (
-    <div style={{ background: 'var(--bg-elevated)', borderRadius: 10, padding: 16 }}>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text-primary)', letterSpacing: '-0.02em' }}>{value}</div>
-      {pct && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{pct}</div>}
+        {/* Linhas */}
+        {linhas.map((l, idx) => {
+          const lucro = lucroLinha(l)
+          return (
+            <div key={l.id} className="table-row" style={{
+              display: 'grid',
+              gridTemplateColumns: '60px 1fr 160px 48px 48px 100px 32px',
+              gap: 0,
+              padding: '12px 16px',
+              alignItems: 'center',
+            }}>
+              {/* Chance */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                }}>{idx + 1}</span>
+              </div>
+
+              {/* Odd */}
+              <div>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.001"
+                  value={l.odd}
+                  onChange={e => setOdd(l.id, e.target.value)}
+                  style={{ fontSize: 15, fontWeight: 600, textAlign: 'left', maxWidth: 120 }}
+                />
+              </div>
+
+              {/* Stake */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  className="input"
+                  type="number"
+                  step="0.01"
+                  value={l.stake}
+                  onChange={e => setStake(l.id, e.target.value)}
+                  style={{ fontSize: 14, maxWidth: 110 }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>BRL</span>
+              </div>
+
+              {/* D - Distribuído */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <input
+                  type="radio"
+                  name={`mode-${l.id}`}
+                  checked={!l.travado}
+                  onChange={() => toggleD(l.id)}
+                  style={{ width: 16, height: 16, accentColor: 'var(--accent-green)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* C - Customizado */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <input
+                  type="radio"
+                  name={`mode-${l.id}`}
+                  checked={l.travado}
+                  onChange={() => toggleC(l.id)}
+                  style={{ width: 16, height: 16, accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+                />
+              </div>
+
+              {/* Lucro */}
+              <div style={{ textAlign: 'right', fontWeight: 600, fontSize: 14, color: lucro === null ? 'var(--text-muted)' : lucro >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                {lucro === null ? '—' : lucro.toFixed(2)}
+              </div>
+
+              {/* Remover */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => removeLinha(l.id)}
+                  disabled={linhas.length <= 2}
+                  style={{ background: 'none', border: 'none', color: linhas.length <= 2 ? 'var(--border)' : 'var(--text-muted)', cursor: linhas.length <= 2 ? 'default' : 'pointer', fontSize: 18, lineHeight: 1, padding: 2 }}
+                >×</button>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Total */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '60px 1fr 160px 48px 48px 100px 32px',
+          gap: 0,
+          padding: '12px 16px',
+          borderTop: '2px solid var(--border)',
+          background: 'var(--bg-elevated)',
+          alignItems: 'center',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', gridColumn: '1/3' }}>Aposta total</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              value={stakeTotal}
+              onChange={e => setStakeTotal(e.target.value)}
+              style={{ fontSize: 14, fontWeight: 700, maxWidth: 110 }}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>BRL</span>
+          </div>
+          <div />
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <input type="radio" checked style={{ width: 16, height: 16, accentColor: 'var(--accent-cyan)' }} readOnly />
+          </div>
+          <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
+            {totalStakes > 0 ? totalStakes.toFixed(2) : '—'}
+          </div>
+          <div />
+        </div>
+      </div>
+
+      {/* Botão adicionar */}
+      <button
+        className="btn-secondary"
+        style={{ marginTop: 14, fontSize: 13 }}
+        onClick={addLinha}
+      >
+        + Adicionar chance
+      </button>
+
+      {/* Legenda */}
+      <div style={{ marginTop: 16, display: 'flex', gap: 20, fontSize: 12, color: 'var(--text-muted)' }}>
+        <span><strong style={{ color: 'var(--accent-green)' }}>D</strong> = Stake distribuído automaticamente</span>
+        <span><strong style={{ color: 'var(--accent-cyan)' }}>C</strong> = Stake customizado manualmente</span>
+      </div>
     </div>
   )
 }
