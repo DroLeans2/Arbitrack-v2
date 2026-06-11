@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { calcularArbitragem, formatBRL, formatPercent } from '@/lib/utils'
 import type { Casa } from '@/types'
+import DatePicker from '@/components/DatePicker'
 
 export default function NovaApostaPage() {
   const router = useRouter()
@@ -106,7 +107,7 @@ export default function NovaApostaPage() {
           </div>
           <div>
             <label className="label">Data do Jogo *</label>
-            <input className="input" type="datetime-local" value={form.data_evento} onChange={e => set('data_evento', e.target.value)} />
+            <DatePicker value={form.data_evento} onChange={v => set('data_evento', v)} placeholder="Selecionar data..." />
           </div>
         </div>
 
