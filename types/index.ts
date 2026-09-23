@@ -16,16 +16,19 @@ export interface Aposta {
   data_evento: string | null
   casa1_id: string
   casa1_mercado: string | null
+  casa1_selecao: string | null
   casa1_odd: number
   casa1_stake: number
-  casa2_id: string
+  casa2_id: string | null
   casa2_mercado: string | null
-  casa2_odd: number
-  casa2_stake: number
+  casa2_selecao: string | null
+  casa2_odd: number | null
+  casa2_stake: number | null
   total_apostado: number
   lucro: number | null
   roi: number | null
   status: StatusAposta
+  casa_vencedora: 1 | 2 | null
   notas: string | null
   grupo_evento: string | null
   created_at: string

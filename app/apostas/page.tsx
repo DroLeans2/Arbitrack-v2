@@ -48,12 +48,12 @@ export default function ApostasPage() {
     carregar()
   }
 
-  const atualizarStatus = async (id: string, status: string, lucro?: number) => {
+  const atualizarStatus = async (id: string, status: string, lucro?: number, casaVencedora?: number | null) => {
     const roi = lucro != null ? (lucro / (apostas.find(a => a.id === id)?.total_apostado || 1)) * 100 : null
     await fetch(`/api/apostas/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, lucro: lucro ?? null, roi: roi ?? null }),
+      body: JSON.stringify({ status, lucro: lucro ?? null, roi: roi ?? null, casa_vencedora: casaVencedora ?? null }),
     })
     carregar()
   }
@@ -68,7 +68,6 @@ export default function ApostasPage() {
         </div>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="input" style={{ maxWidth: 240 }} placeholder="Buscar evento..." value={busca} onChange={e => setBusca(e.target.value)} />
         <select className="select" style={{ maxWidth: 160 }} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
