@@ -83,6 +83,16 @@ export default function ApostaCard({ aposta: a, onDelete, onStatusChange }: Prop
           </button>
         )}
 
+        {a.status !== 'pending' && !resolvendo && (
+          <button className="btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => {
+            setLucroInput(a.lucro != null ? String(a.lucro) : '')
+            setCasaVencedora(a.casa_vencedora ?? null)
+            setResolvendo(true)
+          }}>
+            ✏️ Editar
+          </button>
+        )}
+
         {resolvendo && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
             {!isIndividual && (
