@@ -13,14 +13,12 @@ interface Casa {
 }
 
 type TabType = 'arbitragem' | 'individual'
-
 export default function NovaApostaPage() {
   const router = useRouter()
   const [casas, setCasas] = useState<Casa[]>([])
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState<TabType>('arbitragem')
 
-  // Arbitragem fields
   const [casa1Id, setCasa1Id] = useState('')
   const [casa1Mercado, setCasa1Mercado] = useState('')
   const [casa1Selecao, setCasa1Selecao] = useState('')
@@ -33,7 +31,6 @@ export default function NovaApostaPage() {
   const [casa2Stake, setCasa2Stake] = useState('')
   const [stakeTotal, setStakeTotal] = useState('')
 
-  // Individual fields
   const [indCasaId, setIndCasaId] = useState('')
   const [indMercado, setIndMercado] = useState('')
   const [indSelecao, setIndSelecao] = useState('')
@@ -42,12 +39,9 @@ export default function NovaApostaPage() {
   const [indResultado, setIndResultado] = useState<'pendente' | 'green' | 'red' | 'void'>('pendente')
   const [indLucro, setIndLucro] = useState('')
 
-  // Shared fields
   const [evento, setEvento] = useState('')
   const [dataJogo, setDataJogo] = useState<Date | null>(null)
   const [observacao, setObservacao] = useState('')
-
-  // Arbitragem computed
   const odd1 = parseFloat(casa1Odd) || 0
   const odd2 = parseFloat(casa2Odd) || 0
   const stake1 = parseFloat(casa1Stake) || 0
@@ -62,7 +56,6 @@ export default function NovaApostaPage() {
     : 0
   const roi = total > 0 && lucroGarantido !== 0 ? (lucroGarantido / total) * 100 : 0
 
-  // Individual computed
   const indOddNum = parseFloat(indOdd) || 0
   const indStakeNum = parseFloat(indStake) || 0
   const indRetorno = indOddNum > 0 ? indStakeNum * indOddNum : 0
@@ -81,11 +74,9 @@ export default function NovaApostaPage() {
     setCasa1Stake(s1.toFixed(2))
     setCasa2Stake(s2.toFixed(2))
   }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-
     try {
       if (tab === 'arbitragem') {
         const body = {
@@ -110,16 +101,11 @@ export default function NovaApostaPage() {
         }
         await fetch('/api/apostas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       } else {
-        // Individual bet
         const lucroFinal = indResultado === 'green'
           ? (parseFloat(indLucro) || indLucroCalc)
-          : indResultado === 'red'
-          ? -indStakeNum
-          : indResultado === 'void'
-          ? 0
-          : 0
+          : indResultado === 'red' ? -indStakeNum
+          : indResultado === 'void' ? 0 : 0
         const roiFinal = indStakeNum > 0 ? (lucroFinal / indStakeNum) * 100 : 0
-
         const body = {
           evento,
           data_jogo: dataJogo?.toISOString() || null,
@@ -142,7 +128,6 @@ export default function NovaApostaPage() {
         }
         await fetch('/api/apostas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       }
-
       router.push('/apostas')
     } catch (err) {
       console.error(err)
@@ -150,7 +135,6 @@ export default function NovaApostaPage() {
       setLoading(false)
     }
   }
-
   const inputStyle: React.CSSProperties = {
     width: '100%',
     background: 'var(--bg-card)',
@@ -181,55 +165,19 @@ export default function NovaApostaPage() {
         <h1 style={{ margin: '8px 0 0', fontSize: 24, fontWeight: 700 }}>Nova Aposta</h1>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'var(--bg-card)', borderRadius: 10, padding: 4, border: '1px solid var(--border)', width: 'fit-content' }}>
-        <button
-          type="button"
-          onClick={() => setTab('arbitragem')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: 7,
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontSize: 14,
-            background: tab === 'arbitragem' ? 'var(--accent-green)' : 'transparent',
-            color: tab === 'arbitragem' ? '#000' : 'var(--text-muted)',
-            transition: 'all 0.15s',
-          }}
-        >
+        <button type="button" onClick={() => setTab('arbitragem')} style={{ padding: '8px 20px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, background: tab === 'arbitragem' ? 'var(--accent-green)' : 'transparent', color: tab === 'arbitragem' ? '#000' : 'var(--text-muted)', transition: 'all 0.15s' }}>
           ⚡ Arbitragem
         </button>
-        <button
-          type="button"
-          onClick={() => setTab('individual')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: 7,
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontSize: 14,
-            background: tab === 'individual' ? '#7c3aed' : 'transparent',
-            color: tab === 'individual' ? '#fff' : 'var(--text-muted)',
-            transition: 'all 0.15s',
-          }}
-        >
+        <button type="button" onClick={() => setTab('individual')} style={{ padding: '8px 20px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, background: tab === 'individual' ? '#7c3aed' : 'transparent', color: tab === 'individual' ? '#fff' : 'var(--text-muted)', transition: 'all 0.15s' }}>
           🎯 Aposta Individual
         </button>
       </div>
-
       <form onSubmit={handleSubmit}>
-        {/* Shared: Evento + Data */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
           <div>
             <label style={labelStyle}>Evento / Jogo</label>
-            <input
-              style={inputStyle}
-              value={evento}
-              onChange={e => setEvento(e.target.value)}
-              placeholder="Ex: Flamengo vs Vasco"
-            />
+            <input style={inputStyle} value={evento} onChange={e => setEvento(e.target.value)} placeholder="Ex: Flamengo vs Vasco" />
           </div>
           <div>
             <label style={labelStyle}>Data do Jogo</label>
@@ -237,11 +185,9 @@ export default function NovaApostaPage() {
           </div>
         </div>
 
-        {/* ===== ARBITRAGEM TAB ===== */}
         {tab === 'arbitragem' && (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              {/* Casa 1 */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid #06b6d433', borderRadius: 12, padding: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#06b6d4' }} />
@@ -275,8 +221,6 @@ export default function NovaApostaPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Casa 2 */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid #7c3aed33', borderRadius: 12, padding: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
@@ -312,7 +256,6 @@ export default function NovaApostaPage() {
               </div>
             </div>
 
-            {/* Preview + Auto-distribuir */}
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
@@ -341,19 +284,8 @@ export default function NovaApostaPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input
-                    style={{ ...inputStyle, width: 120 }}
-                    type="number"
-                    step="0.01"
-                    value={stakeTotal}
-                    onChange={e => setStakeTotal(e.target.value)}
-                    placeholder="Total R$"
-                  />
-                  <button
-                    type="button"
-                    onClick={autoDistribuir}
-                    style={{ padding: '10px 16px', background: 'var(--accent-green)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13 }}
-                  >
+                  <input style={{ ...inputStyle, width: 120 }} type="number" step="0.01" value={stakeTotal} onChange={e => setStakeTotal(e.target.value)} placeholder="Total R$" />
+                  <button type="button" onClick={autoDistribuir} style={{ padding: '10px 16px', background: 'var(--accent-green)', color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13 }}>
                     Auto-distribuir
                   </button>
                 </div>
@@ -361,8 +293,6 @@ export default function NovaApostaPage() {
             </div>
           </>
         )}
-
-        {/* ===== INDIVIDUAL TAB ===== */}
         {tab === 'individual' && (
           <>
             <div style={{ background: 'var(--bg-card)', border: '1px solid #7c3aed44', borderRadius: 12, padding: 24, marginBottom: 16 }}>
@@ -370,7 +300,6 @@ export default function NovaApostaPage() {
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
                 <span style={{ fontWeight: 700, color: '#a78bfa' }}>Detalhes da Aposta</span>
               </div>
-
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>Casa de Apostas</label>
@@ -379,7 +308,6 @@ export default function NovaApostaPage() {
                     {casas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                   </select>
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={labelStyle}>Mercado</label>
@@ -390,7 +318,6 @@ export default function NovaApostaPage() {
                     <input style={inputStyle} value={indSelecao} onChange={e => setIndSelecao(e.target.value)} placeholder="Ex: Time A vence" />
                   </div>
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={labelStyle}>Odd</label>
@@ -401,8 +328,6 @@ export default function NovaApostaPage() {
                     <input style={inputStyle} type="number" step="0.01" value={indStake} onChange={e => setIndStake(e.target.value)} placeholder="100.00" required />
                   </div>
                 </div>
-
-                {/* Retorno estimado */}
                 {indOddNum > 0 && indStakeNum > 0 && (
                   <div style={{ display: 'flex', gap: 24, padding: '14px 18px', background: '#7c3aed11', borderRadius: 8, border: '1px solid #7c3aed33' }}>
                     <div>
@@ -415,52 +340,20 @@ export default function NovaApostaPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Resultado (opcional) */}
                 <div>
                   <label style={labelStyle}>Resultado (opcional — pode preencher depois)</label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {(['pendente', 'green', 'red', 'void'] as const).map(r => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setIndResultado(r)}
-                        style={{
-                          padding: '8px 18px',
-                          borderRadius: 8,
-                          border: '1px solid',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: 13,
-                          borderColor: indResultado === r
-                            ? r === 'green' ? 'var(--accent-green)' : r === 'red' ? '#ef4444' : r === 'void' ? '#f59e0b' : 'var(--border)'
-                            : 'var(--border)',
-                          background: indResultado === r
-                            ? r === 'green' ? '#00e67622' : r === 'red' ? '#ef444422' : r === 'void' ? '#f59e0b22' : '#ffffff11'
-                            : 'transparent',
-                          color: indResultado === r
-                            ? r === 'green' ? 'var(--accent-green)' : r === 'red' ? '#ef4444' : r === 'void' ? '#f59e0b' : 'var(--text-primary)'
-                            : 'var(--text-muted)',
-                        }}
-                      >
+                      <button key={r} type="button" onClick={() => setIndResultado(r)} style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid', cursor: 'pointer', fontWeight: 600, fontSize: 13, borderColor: indResultado === r ? r === 'green' ? 'var(--accent-green)' : r === 'red' ? '#ef4444' : r === 'void' ? '#f59e0b' : 'var(--border)' : 'var(--border)', background: indResultado === r ? r === 'green' ? '#00e67622' : r === 'red' ? '#ef444422' : r === 'void' ? '#f59e0b22' : '#ffffff11' : 'transparent', color: indResultado === r ? r === 'green' ? 'var(--accent-green)' : r === 'red' ? '#ef4444' : r === 'void' ? '#f59e0b' : 'var(--text-primary)' : 'var(--text-muted)' }}>
                         {r === 'pendente' ? '⏳ Pendente' : r === 'green' ? '✅ Green' : r === 'red' ? '❌ Red' : '↩️ Void'}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* Lucro real se green */}
                 {indResultado === 'green' && (
                   <div>
                     <label style={labelStyle}>Lucro Real (R$) — deixe vazio para usar o calculado</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      step="0.01"
-                      value={indLucro}
-                      onChange={e => setIndLucro(e.target.value)}
-                      placeholder={indLucroCalc.toFixed(2)}
-                    />
+                    <input style={inputStyle} type="number" step="0.01" value={indLucro} onChange={e => setIndLucro(e.target.value)} placeholder={indLucroCalc.toFixed(2)} />
                   </div>
                 )}
               </div>
@@ -468,51 +361,16 @@ export default function NovaApostaPage() {
           </>
         )}
 
-        {/* Observação (shared) */}
         <div style={{ marginBottom: 24 }}>
           <label style={labelStyle}>Observação</label>
-          <textarea
-            style={{ ...inputStyle, height: 80, resize: 'vertical' }}
-            value={observacao}
-            onChange={e => setObservacao(e.target.value)}
-            placeholder="Notas adicionais..."
-          />
+          <textarea style={{ ...inputStyle, height: 80, resize: 'vertical' }} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Notas adicionais..." />
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '12px 32px',
-              background: tab === 'individual' ? '#7c3aed' : 'var(--accent-green)',
-              color: tab === 'individual' ? '#fff' : '#000',
-              border: 'none',
-              borderRadius: 8,
-              fontWeight: 700,
-              fontSize: 15,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
+          <button type="submit" disabled={loading} style={{ padding: '12px 32px', background: tab === 'individual' ? '#7c3aed' : 'var(--accent-green)', color: tab === 'individual' ? '#fff' : '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
             {loading ? 'Salvando...' : 'Salvar Aposta'}
           </button>
-          <Link
-            href="/apostas"
-            style={{
-              padding: '12px 24px',
-              background: 'transparent',
-              color: 'var(--text-muted)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              fontWeight: 600,
-              fontSize: 15,
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
+          <Link href="/apostas" style={{ padding: '12px 24px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 15, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
             Cancelar
           </Link>
         </div>
