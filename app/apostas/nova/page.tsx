@@ -181,7 +181,7 @@ export default function NovaApostaPage() {
           </div>
           <div>
             <label style={labelStyle}>Data do Jogo</label>
-            <DatePicker value={dataJogo} onChange={setDataJogo} />
+            <DatePicker value={dataJogo ? dataJogo.toISOString() : ''} onChange={(v) => setDataJogo(v ? new Date(v) : null)} />
           </div>
         </div>
 
